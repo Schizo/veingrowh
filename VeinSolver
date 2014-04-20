@@ -1,0 +1,55 @@
+node = hou.pwd()
+geo = node.geometry()
+TreeNodeId = geo.addAttrib(hou.attribType.Point, "TreeNodeId", 0)
+isNodeAttribute = geo.addAttrib(hou.attribType.Point, "isNode", 0)
+colorAttrib = geo.addAttrib(hou.attribType.Point, "Cd", (0.0, 0.0, 0.0), True)
+
+
+class PointCloud:
+    numOfPoints = len(geo.points())
+    initialNode = geo.createPoint()
+
+    def __init__(self):
+        self.numberOfAttractionPoints = 0
+        self.sumOfDistance = hou.Vector3(0, 0, 0)
+        self.InitStartingTreeNode()
+        #self.initialNode = geo.createPoint()
+
+
+
+    def sumOfPointDistance(self):
+        self.sumOfDistance = hou.Vector3(0, 0, 0)
+        self.numberOfAttractionPoints = 0
+        
+        for attractionPoint in geo.points():
+            if attractionPoint.attribValue('isNode') < 1:
+                self.numberOfAttractionPoints += 1
+                self.sumOfDistance += attractionPoint.position()
+
+    def InitStartingTreeNode(self):
+        self.initialNode.setPosition((1, 0, 0))
+        self.initialNode.setAttribValue(isNodeAttribute, 1)   
+        self.initialNode.setAttribValue(colorAttrib, (1.0, 1.0, 1.0))
+        self.initialNode.setAttribValue("treeNodeId",self.numOfPoints)
+        self.numOfPoints += 1
+        print(self.numOfPoints)
+
+    def calculateAverageDir(self, vectorPositions, average):
+        return hou.Vector3(vectorPositions[0] / average, vectorPositions[1] / average, vectorPositions[2] / average)
+
+    
+    def createNewTreeNode(self, position):
+        newNode = geo.createPoint()
+        newNode.setPosition(position)
+        newNode.setAttribValue(isNodeAttribute, 1)
+        newNode.setAttribValue(colorAttrib, (1.0, 0.0, 0.0))
+        self.initialNode.setAttribValue("treeNodeId",self.numOfPoints)
+        self.numOfPoints += 1
+  
+
+
+def Solver():
+    pc = PointCloud()
+    pc.sumOfPointDistance()
+    averagedPosition = pc.calculateAverageDir(pc.sumOfDistance, pc.numberOfAttractionPoints)
+    nextTreeNode = pc.createNewTreeNode(averagedPosition.normalized())
